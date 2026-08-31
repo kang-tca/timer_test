@@ -3,271 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>교육용 뽀모도로 타이머</title>
-////////////////////////////////////////////////////////////////////////////////////////////////
-    <!-- 외부 라이브러리 (Tailwind CSS, Lucide Icons) -->
+    <title>재미있는 타이머</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- [1. CSS PART] - 디자인 및 애니메이션 설정 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap');
-        
         body {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            min-height: 100vh;
         }
-
-        /* 디지털 시계 폰트 */
-        .digital-font {
-            font-family: 'JetBrains Mono', monospace;
+        .timer-display {
+            font-size: clamp(3rem, 15vw, 10rem);
+            font-weight: 700;
+            line-height: 1;
+            transition: color 0.3s ease;
         }
-
-        /* 시각적 타이머: 이미지와 동일하게 시계 방향으로 줄어들도록 반전 처리 */
-        #visual-timer {
-            transition: background 0.3s ease;
-            transform: scaleX(-1); 
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
-
-        /* 타이머 내부 숫자는 다시 정방향으로 반전 */
-        .timer-number {
-            transform: scaleX(-1);
-        }
-
-        /* 숫자 입력창의 화살표 제거 */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        /* 버튼 호버 및 활성화 애니메이션 */
-        .btn-interact {
-            transition: all 0.2s ease;
-        }
-        .btn-interact:active {
-            transform: scale(0.95);
+        .spinner {
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
         }
     </style>
 </head>
+<body class="flex flex-col items-center justify-center p-4">
 
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+    <div id="app-container" class="bg-white p-6 md:p-10 rounded-xl shadow-2xl w-full max-w-lg text-center transform transition duration-500 hover:scale-[1.02]">
 
-    <!-- [2. HTML PART] - 앱의 구조 및 레이아웃 -->
-    <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-slate-100">
-        
-        <!-- 상단 헤더 및 시간 설정 섹션 -->
-        <header class="text-center mb-8">
-            <h1 class="text-2xl font-bold text-slate-700 mb-6">시각적 뽀모도로 타이머</h1>
-            
-            <!-- 시간 입력 폼 -->
-            <div class="flex items-center justify-center gap-2 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div class="flex flex-col items-center">
-                    <span class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-tighter">MINUTES</span>
-                    <input type="number" id="input-min" value="25" min="0" max="60" 
-                        class="w-14 text-2xl digital-font text-center bg-transparent border-b-2 border-slate-300 focus:border-red-400 outline-none">
-                </div>
-                <span class="text-2xl digital-font pt-4 text-slate-400">:</span>
-                <div class="flex flex-col items-center">
-                    <span class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-tighter">SECONDS</span>
-                    <input type="number" id="input-sec" value="0" min="0" max="59" 
-                        class="w-14 text-2xl digital-font text-center bg-transparent border-b-2 border-slate-300 focus:border-red-400 outline-none">
-                </div>
-                <button id="set-time-btn" class="ml-4 p-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 btn-interact">
-                    <i data-lucide="settings-2" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <!-- 현재 남은 시간 (디지털) -->
-            <div id="digital-display" class="text-6xl digital-font font-bold text-slate-800 tracking-tight mb-2">
-                25:00
-            </div>
-        </header>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-3">
+            🕒 수업 시간 타이머
+        </h1>
 
-        <!-- 중앙 비주얼 타이머 섹션 -->
-        <main class="relative flex items-center justify-center mb-10">
-            <div class="relative w-72 h-72 rounded-full border-[12px] border-slate-800 flex items-center justify-center bg-white shadow-xl overflow-hidden">
-                <!-- 빨간색 게이지 영역 (JS에서 background 업데이트) -->
-                <div id="visual-timer" class="absolute inset-0 w-full h-full"></div>
-
-                <!-- 시계 눈금 및 숫자 레이어 (JS에서 동적 생성) -->
-                <div id="clock-face" class="absolute inset-0 pointer-events-none"></div>
-
-                <!-- 중앙 디자인 핀 -->
-                <div class="z-10 w-8 h-8 bg-slate-800 rounded-full border-4 border-slate-700 shadow-md flex items-center justify-center">
-                    <div class="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
-                </div>
-            </div>
-        </main>
-
-        <!-- 하단 컨트롤 버튼 섹션 -->
-        <footer class="flex justify-center items-center gap-6">
-            <button id="reset-btn" class="p-4 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 btn-interact">
-                <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
-            </button>
-            
-            <button id="toggle-btn" class="w-20 h-20 rounded-full flex items-center justify-center bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 btn-interact">
-                <i id="toggle-icon" data-lucide="play" class="w-10 h-10 fill-current ml-1"></i>
-            </button>
-
-            <button id="test-sound-btn" class="p-4 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 btn-interact">
-                <i data-lucide="bell" class="w-6 h-6"></i>
-            </button>
-        </footer>
-
-        <!-- 상태 메시지 알림 -->
-        <p id="status-msg" class="mt-8 text-center text-slate-400 text-sm font-medium">
-            공부 시간을 설정하고 시작하세요.
+        <p id="user-id-display" class="text-sm text-gray-500 mb-4 truncate">
+            사용자 ID: 로컬 모드 작동 중
         </p>
+
+        <!-- 💡 [추가] 자주 쓰는 시간 간편 설정 버튼 영역 -->
+        <div class="flex justify-center space-x-2 mb-4">
+            <button onclick="shortcutTime(3)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-full text-sm transition shadow-sm">⏱️ 3분</button>
+            <button onclick="shortcutTime(5)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-full text-sm transition shadow-sm">⏱️ 5분</button>
+            <button onclick="shortcutTime(10)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1.5 px-4 rounded-full text-sm transition shadow-sm">⏱️ 10분</button>
+        </div>
+
+        <!-- 시간 표시 영역 -->
+        <div id="time-display" class="timer-display text-blue-600 my-6">
+            05:00
+        </div>
+
+        <!-- 설정 입력 영역 -->
+        <div id="settings-area" class="flex justify-center items-center space-x-2 mb-8 p-4 bg-blue-50 rounded-lg">
+            <input type="number" id="minutes-input" value="5" min="0" max="99" class="w-16 p-2 text-lg text-center border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500" aria-label="Minutes">
+            <span class="text-xl font-bold text-gray-700">분</span>
+            <input type="number" id="seconds-input" value="0" min="0" max="59" class="w-16 p-2 text-lg text-center border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500" aria-label="Seconds">
+            <span class="text-xl font-bold text-gray-700">초</span>
+            <button id="set-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-150 transform hover:scale-105">
+                설정
+            </button>
+        </div>
+
+        <!-- 타이머 제어 버튼 영역 -->
+        <div id="controls" class="grid grid-cols-3 gap-3 md:gap-5">
+            <button id="start-button" class="col-span-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150 transform hover:scale-105 disabled:bg-gray-400">
+                시작
+            </button>
+            <button id="pause-button" class="col-span-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150 transform hover:scale-105 disabled:bg-gray-400" disabled>
+                일시정지
+            </button>
+            <button id="reset-button" class="col-span-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-150 transform hover:scale-105 disabled:bg-gray-400">
+                재설정
+            </button>
+        </div>
+
+        <!-- 로딩 인디케이터/에러 메시지 -->
+        <div id="status-message" class="mt-6 h-6 text-sm">
+            <div id="loading-indicator" class="flex items-center justify-center space-x-2 text-blue-600" style="display: none;">
+                <div class="spinner w-4 h-4 rounded-full border-2 border-transparent"></div>
+                <span>데이터 동기화 중...</span>
+            </div>
+            <p id="error-message" class="text-red-500" style="display: none;"></p>
+        </div>
     </div>
 
-    <!-- [3. JAVASCRIPT PART] - 타이머 로직 및 인터랙션 -->
-    <script>
-        /** [A] 데이터 상태 및 엘리먼트 참조 **/
-        let timeLeft = 1500; 
-        let initialTime = 1500;
-        let timerInterval = null;
-        let isActive = false;
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const digitalDisplay = document.getElementById('digital-display');
-        const visualTimer = document.getElementById('visual-timer');
-        const clockFace = document.getElementById('clock-face');
-        const toggleBtn = document.getElementById('toggle-btn');
-        const toggleIcon = document.getElementById('toggle-icon');
-        const resetBtn = document.getElementById('reset-btn');
-        const setTimeBtn = document.getElementById('set-time-btn');
-        const testSoundBtn = document.getElementById('test-sound-btn');
-        const statusMsg = document.getElementById('status-msg');
-
-        /** [B] UI 초기화: 시계 눈금 생성 **/
-        function createClockFace() {
-            for (let i = 0; i < 60; i++) {
-                const angle = i * 6;
-                const tick = document.createElement('div');
-                tick.className = 'absolute w-full h-full flex justify-center pt-1';
-                tick.style.transform = `rotate(${angle}deg)`;
-                
-                if (i % 5 === 0) {
-                    // 숫자와 긴 눈금
-                    const numContainer = document.createElement('div');
-                    numContainer.className = 'flex flex-col items-center';
-                    
-                    const num = document.createElement('span');
-                    num.className = 'timer-number text-xs font-black text-slate-600';
-                    num.style.transform = `rotate(${-angle}deg)`;
-                    num.innerText = i;
-                    
-                    const marker = document.createElement('div');
-                    marker.className = 'w-0.5 h-2.5 bg-slate-400 mt-1';
-                    
-                    numContainer.appendChild(num);
-                    numContainer.appendChild(marker);
-                    tick.appendChild(numContainer);
-                } else {
-                    // 짧은 눈금
-                    const smallTick = document.createElement('div');
-                    smallTick.className = 'w-[1px] h-1 bg-slate-300';
-                    tick.appendChild(smallTick);
-                }
-                clockFace.appendChild(tick);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'class-timer-default';
+        
+        let firebaseConfig = null;
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
             }
+        } catch (e) {
+            console.warn("Firebase 설정 파싱 실패, 로컬 모드로 전환합니다.");
         }
+        
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const TIMER_DOC_PATH = `artifacts/${appId}/public/data/classTimer/timerState`;
+        const DEFAULT_DURATION_SECONDS = 300;
 
-        /** [C] 화면 업데이트 로직 **/
-        function updateDisplay() {
-            // 1. 디지털 텍스트 업데이트
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            digitalDisplay.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        // UI 요소
+        const timeDisplay = document.getElementById('time-display');
+        const startButton = document.getElementById('start-button');
+        const pauseButton = document.getElementById('pause-button');
+        const resetButton = document.getElementById('reset-button');
+        const setButton = document.getElementById('set-button');
+        const minutesInput = document.getElementById('minutes-input');
+        const secondsInput = document.getElementById('seconds-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const errorMessage = document.getElementById('error-message');
+        const userIdDisplay = document.getElementById('user-id-display');
 
-            // 2. 비주얼 게이지 업데이트 (60분=3600초 기준)
-            const rotation = (timeLeft / 3600) * 360;
-            visualTimer.style.background = `conic-gradient(#ef4444 ${rotation}deg, #f1f5f9 0deg)`;
-        }
-
-        /** [D] 타이머 핵심 제어 함수 **/
-        function toggleTimer() {
-            if (isActive) {
-                // 중지 모드
-                clearInterval(timerInterval);
-                isActive = false;
-                updateControlUI('play', 'bg-red-500', 'text-white', "일시 정지됨");
-            } else {
-                // 시작 모드
-                if (timeLeft <= 0) return;
-                isActive = true;
-                updateControlUI('pause', 'bg-amber-100', 'text-amber-600', "집중하는 시간입니다!");
-                
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    updateDisplay();
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        isActive = false;
-                        playAlarm();
-                        updateControlUI('play', 'bg-red-500', 'text-white', "시간이 다 되었습니다!");
-                    }
-                }, 1000);
-            }
-        }
-
-        function updateControlUI(icon, bgClass, textClass, msg) {
-            toggleIcon.setAttribute('data-lucide', icon);
-            // 기존 색상 클래스 교체
-            toggleBtn.className = `w-20 h-20 rounded-full flex items-center justify-center shadow-lg shadow-red-200 transition-all active:scale-95 ${bgClass} ${textClass}`;
-            statusMsg.innerText = msg;
-            lucide.createIcons();
-        }
-
-        function resetTimer() {
-            clearInterval(timerInterval);
-            isActive = false;
-            timeLeft = initialTime;
-            updateDisplay();
-            updateControlUI('play', 'bg-red-500', 'text-white', "공부 시간을 설정하고 시작하세요.");
-        }
-
-        function setCustomTime() {
-            const min = parseInt(document.getElementById('input-min').value) || 0;
-            const sec = parseInt(document.getElementById('input-sec').value) || 0;
-            const total = (min * 60) + sec;
-            
-            if (total > 0 && total <= 3600) {
-                initialTime = total;
-                timeLeft = total;
-                resetTimer();
-            } else {
-                alert("1초에서 60분 사이의 시간을 설정해주세요.");
-            }
-        }
-
-        /** [E] 사운드 및 알림 **/
-        function playAlarm() {
-            try {
-                const context = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = context.createOscillator();
-                const gain = context.createGain();
-                oscillator.connect(gain);
-                gain.connect(context.destination);
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(440, context.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.00001, context.currentTime + 1.5);
-                oscillator.start();
-                oscillator.stop(context.currentTime + 1.5);
-            } catch (e) { console.log("Audio play failed"); }
-        }
-
-        /** [F] 이벤트 바인딩 **/
-        toggleBtn.addEventListener('click', toggleTimer);
-        resetBtn.addEventListener('click', resetTimer);
-        setTimeBtn.addEventListener('click', setCustomTime);
-        testSoundBtn.addEventListener('click', playAlarm);
-
-        // 페이지 로드 시 초기화 실행
-        window.onload = () => {
-            createClockFace();
-            updateDisplay();
-            lucide.createIcons();
+        // 로컬 상태 변수
+        let db = null, auth = null;
+        let userId = null;
+        let tickInterval = null;
+        
+        let currentTimerState = {
+            status: 'STOPPED',
+            totalDurationSeconds: DEFAULT_DURATION_SECONDS,
+            startTimeMs: 0,
+            pausedTimeRemainingSeconds: DEFAULT_DURATION_SECONDS,
         };
+
+        // 💡 [추가] 브라우저 자체 내장 오디오 시스템을 활용한 비프음 알림 함수
+        function playBeepSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 조금 더 상큼하고 부드러운 '딩동' 효과음을 위한 2단계 음성 생성
+                const playTone = (freq, startTime, duration) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, startTime);
+                    gain.gain.setValueAtTime(0.3, startTime);
+                    gain.gain.exponentialRampToValueAtTime(0.00001, startTime + duration);
+                    osc.start(startTime);
+                    osc.stop(startTime + duration);
+                };
+
+                // 첫 번째 높은 음, 이어서 더 높은 음 (경쾌한 딩동)
+                playTone(523.25, audioCtx.currentTime, 0.15); // 도 (C5)
+                playTone(659.25, audioCtx.currentTime + 0.15, 0.3); // 미 (E5)
+            } catch (e) {
+                console.error("오디오 재생 실패:", e);
+            }
+        }
+
+        // 💡 [추가] 전역 스코프에 숏컷 함수 등록
+        window.shortcutTime = function(minutes) {
+            if (currentTimerState.status !== 'STOPPED' && currentTimerState.status !== 'FINISHED') return;
+            minutesInput.value = minutes;
+            secondsInput.value = 0;
+            handleSetTime();
+        }
+
+        function formatTime(totalSeconds) {
+            const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+            const min = Math.floor(safeSeconds / 60);
+            const sec = safeSeconds % 60;
+            return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        function updateButtonStates() {
+            const status = currentTimerState.status;
+            
+            startButton.disabled = (status === 'RUNNING' || status === 'FINISHED');
+            pauseButton.disabled = (status !== 'RUNNING');
+            resetButton.disabled = (status === 'STOPPED' || status === 'FINISHED');
+
+            const isEditable = (status === 'STOPPED' || status === 'FINISHED');
+            setButton.disabled = !isEditable;
+            minutesInput.disabled = !isEditable;
+            secondsInput.disabled = !isEditable;
+            
+            // 숏컷 버튼들도 상태에 따라 활성화/비활성화
+            document.querySelectorAll('button[onclick^="shortcutTime"]').forEach(btn => {
+                btn.disabled = !isEditable;
+                if(!isEditable) btn.classList.add('opacity-50', 'cursor-not-allowed');
+                else btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+
+            if (status === 'PAUSED') {
+                startButton.textContent = '계속';
+            } else if (status === 'FINISHED') {
+                startButton.textContent = '완료됨';
+            } else {
+                startButton.textContent = '시작';
+            }
+        }
+
+        // 💡 [수정] 마감 임박 효과 적용 (30초 이하 시 주황/빨강 깜빡임 효과)
+        function updateDisplay(remainingSeconds) {
+            const timeStr = formatTime(remainingSeconds);
+            timeDisplay.textContent = timeStr;
+            
+            timeDisplay.classList.remove('text-blue-600', 'text-amber-500', 'text-red-600', 'animate-pulse');
+            
+            if (remainingSeconds <= 0) {
+                timeDisplay.classList.add('text-red-600', 'animate-pulse');
+            } else if (remainingSeconds <= 30) {
+                // 30초 이하일 때 긴박함을 주는 오렌지 컬러 + 깜빡임 효과
+                timeDisplay.classList.add('text-amber-500', 'animate-pulse');
+            } else {
+                timeDisplay.classList.add('text-blue-600');
+            }
+        }
+
+        function calculateRemainingTime() {
+            const state = currentTimerState;
+            const now = Date.now();
+            let remainingSeconds = 0;
+
+            if (state.status === 'RUNNING') {
+                const elapsedMs = now - state.startTimeMs;
+                remainingSeconds = state.totalDurationSeconds - (elapsedMs / 1000);
+            } else {
+                remainingSeconds = state.pausedTimeRemainingSeconds;
+            }
+
+            if (remainingSeconds <= 0 && state.status === 'RUNNING') {
+                remainingSeconds = 0;
+                handleTimerFinished();
+            }
+
+            return remainingSeconds;
+        }
+
+        function handleTimerFinished() {
+            // 💡 [추가] 타이머가 종료되는 순간 알림음 재생
+            playBeepSound();
+
+            if (db && userId) {
+                setTimerState({
+                    status: 'FINISHED',
+                    pausedTimeRemainingSeconds: 0
+                });
+            } else {
+                currentTimerState.status = 'FINISHED';
+                currentTimerState.pausedTimeRemainingSeconds = 0;
+                updateButtonStates();
+                tick();
+            }
+        }
+
+        function tick() {
+            const remainingSeconds = calculateRemainingTime();
+            updateDisplay(remainingSeconds);
+
+            if (remainingSeconds <= 0 || currentTimerState.status === 'FINISHED' || currentTimerState.status === 'STOPPED') {
+                if (tickInterval) {
+                    clearInterval(tickInterval);
+                    tickInterval = null;
+                }
+            }
+        }
+
+        async function setTimerState(updates) {
+            currentTimerState = { ...currentTimerState, ...updates };
+
+            if (db && userId) {
+                try {
+                    await setDoc(doc(db, TIMER_DOC_PATH), currentTimerState, { merge: true });
+                } catch (e) {
+                    console.error("Firestore 업데이트 오류:", e);
+                }
+            } else {
+                updateButtonStates();
+                if (currentTimerState.status === 'RUNNING' && !tickInterval) {
+                    tickInterval = setInterval(tick, 1000);
+                } else if (currentTimerState.status !== 'RUNNING') {
+                    if (tickInterval) {
+                        clearInterval(tickInterval);
+                        tickInterval = null;
+                    }
+                    tick();
+                }
+            }
+        }
+
+        function syncTimerState() {
+            if (!db) return;
+
+            const timerDocRef = doc(db, TIMER_DOC_PATH);
+            loadingIndicator.style.display = 'flex';
+
+            onSnapshot(timerDocRef, (docSnapshot) => {
+                loadingIndicator.style.display = 'none';
+
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    currentTimerState = { ...currentTimerState, ...data };
+                } else {
+                    setTimerState(currentTimerState);
+                }
+
+                updateButtonStates();
+                
+                if (currentTimerState.status === 'RUNNING' && !tickInterval) {
+                    tickInterval = setInterval(tick, 1000);
+                } else if (currentTimerState.status !== 'RUNNING') {
+                    if (tickInterval) {
+                        clearInterval(tickInterval);
+                        tickInterval = null;
+                    }
+                    tick();
+                }
+            }, (error) => {
+                console.warn("Firestore 동기화 실패 (로컬 모드로 계속 작동):", error);
+                loadingIndicator.style.display = 'none';
+            });
+        }
+        
+        async function handleStart() {
+            if (currentTimerState.status === 'RUNNING') return;
+            
+            const now = Date.now();
+            let updates = {};
+
+            if (currentTimerState.status === 'PAUSED') {
+                updates = {
+                    status: 'RUNNING',
+                    startTimeMs: now - (currentTimerState.totalDurationSeconds - currentTimerState.pausedTimeRemainingSeconds) * 1000,
+                    pausedTimeRemainingSeconds: 0 
+                };
+            } else if (currentTimerState.status === 'STOPPED' || currentTimerState.status === 'FINISHED') {
+                updates = {
+                    status: 'RUNNING',
+                    startTimeMs: now,
+                    pausedTimeRemainingSeconds: 0 
+                };
+            }
+            
+            await setTimerState(updates);
+        }
+
+        async function handlePause() {
+            if (currentTimerState.status !== 'RUNNING') return;
+            const remainingSeconds = calculateRemainingTime();
+
+            await setTimerState({
+                status: 'PAUSED',
+                pausedTimeRemainingSeconds: remainingSeconds
+            });
+        }
+
+        async function handleReset() {
+            if (currentTimerState.status === 'STOPPED') return;
+
+            await setTimerState({
+                status: 'STOPPED',
+                pausedTimeRemainingSeconds: currentTimerState.totalDurationSeconds,
+                startTimeMs: 0
+            });
+        }
+
+        async function handleSetTime() {
+            if (currentTimerState.status !== 'STOPPED' && currentTimerState.status !== 'FINISHED') return;
+
+            const min = parseInt(minutesInput.value) || 0;
+            const sec = parseInt(secondsInput.value) || 0;
+            const newDuration = (min * 60) + sec;
+
+            if (newDuration <= 0) {
+                alert("타이머는 0초보다 길게 설정해야 합니다.");
+                return;
+            }
+
+            await setTimerState({
+                totalDurationSeconds: newDuration,
+                pausedTimeRemainingSeconds: newDuration,
+                status: 'STOPPED',
+                startTimeMs: 0
+            });
+
+            updateDisplay(newDuration);
+            updateButtonStates();
+        }
+
+        async function setupFirebase() {
+            if (!firebaseConfig || !firebaseConfig.projectId) {
+                userIdDisplay.textContent = "모드: 로컬 타이머 (단독 실행)";
+                updateButtonStates();
+                tick();
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                setLogLevel('Error');
+                await setPersistence(auth, browserLocalPersistence);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplay.textContent = `사용자 ID (공유용): ${userId}`;
+                        syncTimerState();
+                    } else {
+                        userIdDisplay.textContent = '모드: 로컬 타이머';
+                        updateButtonStates();
+                        tick();
+                    }
+                });
+                
+            } catch (error) {
+                userIdDisplay.textContent = "모드: 로컬 타이머";
+                updateButtonStates();
+                tick();
+            }
+        }
+        
+        startButton.addEventListener('click', handleStart);
+        pauseButton.addEventListener('click', handlePause);
+        resetButton.addEventListener('click', handleReset);
+        setButton.addEventListener('click', handleSetTime);
+
+        window.onload = setupFirebase;
     </script>
 </body>
 </html>
